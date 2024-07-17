@@ -11,6 +11,12 @@ public class GoogleService {
 		// How to download
 		// How to build zip
 		// How to upload to any server.
+		//TODO: 
 		return "OK#ReadFile";
+	}
+
+
+	public String readFileContent(){
+		return "This is demo file content";
 	}
 }
