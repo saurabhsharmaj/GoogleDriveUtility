@@ -22,4 +22,9 @@ public class HomeController {
 	String readGoogleDriveFiles(@RequestParam String filename) throws Exception {
 		return googleService.readGoogleDrive(filename);
 	}
+
+	@GetMapping("/readContent")
+	public String getFileContent(){
+		return googleService.readFileContent();
+	}
 }
