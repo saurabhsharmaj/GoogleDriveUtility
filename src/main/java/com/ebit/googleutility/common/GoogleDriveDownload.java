@@ -7,11 +7,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.util.Collections;
 import java.util.List;
 
 import org.springframework.stereotype.Component;
+import org.zeroturnaround.zip.ZipUtil;
 
 import com.google.api.client.auth.oauth2.Credential;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
@@ -67,41 +71,63 @@ public class GoogleDriveDownload {
 		return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
 	}
 
-	public void readAndSaveFile(String filename) throws IOException, GeneralSecurityException {
+	public void readAndSaveFile(String folderId) throws IOException, GeneralSecurityException {
 		// Build a new authorized API client service.
 		final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
 		Drive service = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
 				.setApplicationName(APPLICATION_NAME).build();
 
 		// Print the names and IDs for up to 10 files.
-		FileList result = service.files().list().setPageSize(10).setFields("nextPageToken, files(id, name)").execute();
+		FileList result = service.files().list()
+				//.setPageSize(10)
+				.setQ("'" + folderId + "' in parents")
+				.setFields("nextPageToken, files(id, name)")
+				.execute();
+		
+		
+		
 		List<File> files = result.getFiles();
 		if (files == null || files.isEmpty()) {
 			System.out.println("No files found.");
 		} else {
-			System.out.println("Files:");
-			for (File file : files) {
-				System.out.printf("%s (%s)\n", file.getName(), file.getId());
-			}
+			Path downloadDir = Paths.get("downloaded_files");
+            Files.createDirectories(downloadDir);
+
+            for (File file : files) {
+                String fileId = file.getId();
+                String fileName = file.getName();
+                System.out.printf("Downloading %s (%s)\n", fileName, fileId);
+
+                Path filePath = downloadDir.resolve(fileName);
+                try (FileOutputStream outputStream = new FileOutputStream(filePath.toFile())) {
+                    service.files().get(fileId)
+                            .executeMediaAndDownloadTo(outputStream);
+                }
+            }
+
+            Path zipPath = Paths.get("downloaded_files.zip");
+            ZipUtil.pack(downloadDir.toFile(), zipPath.toFile());
+            System.out.printf("Files downloaded and zipped to %s\n", zipPath.toString());
+        
 		}
 
-		// Example to download a file
-		//String fileId = "1qeZPKc8IDGjNj5l8Pc5JNT7kOMJJa2K3"; // replace with your file ID
-		OutputStream outputStream = new ByteArrayOutputStream();
-		Get getFile = service.files().get(filename);
-		getFile.executeMediaAndDownloadTo(outputStream);
-
-		// Save the OutputStream content to a file
-		try (FileOutputStream fileOutputStream = new FileOutputStream(filename)) {
-			if (outputStream instanceof ByteArrayOutputStream) {
-				ByteArrayOutputStream byteArrayOutputStream = (ByteArrayOutputStream) outputStream;
-				byteArrayOutputStream.writeTo(fileOutputStream);
-				System.out.println("Data written to file successfully.");
-			} else {
-				System.out.println("OutputStream is not an instance of ByteArrayOutputStream.");
-			}
-
-			System.out.println("File downloaded successfully!");
-		}
+		/*
+		 * // Example to download a file //String fileId =
+		 * "1qeZPKc8IDGjNj5l8Pc5JNT7kOMJJa2K3"; // replace with your file ID
+		 * OutputStream outputStream = new ByteArrayOutputStream(); Get getFile =
+		 * service.files().get(folderId);
+		 * getFile.executeMediaAndDownloadTo(outputStream);
+		 * 
+		 * // Save the OutputStream content to a file try (FileOutputStream
+		 * fileOutputStream = new FileOutputStream(folderId)) { if (outputStream
+		 * instanceof ByteArrayOutputStream) { ByteArrayOutputStream
+		 * byteArrayOutputStream = (ByteArrayOutputStream) outputStream;
+		 * byteArrayOutputStream.writeTo(fileOutputStream);
+		 * System.out.println("Data written to file successfully."); } else {
+		 * System.out.
+		 * println("OutputStream is not an instance of ByteArrayOutputStream."); }
+		 * 
+		 * System.out.println("File downloaded successfully!"); }
+		 */
 	}
 }
