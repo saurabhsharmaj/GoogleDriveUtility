@@ -86,7 +86,7 @@ public class GoogleDriveDownload {
 		}
 
 		// Example to download a file
-		String fileId = "1qeZPKc8IDGjNj5l8Pc5JNT7kOMJJa2K3"; // replace with your file ID
+		//String fileId = "1qeZPKc8IDGjNj5l8Pc5JNT7kOMJJa2K3"; // replace with your file ID
 		OutputStream outputStream = new ByteArrayOutputStream();
 		Get getFile = service.files().get(filename);
 		getFile.executeMediaAndDownloadTo(outputStream);
