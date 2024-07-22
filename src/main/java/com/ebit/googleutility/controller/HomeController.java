@@ -22,8 +22,4 @@ public class HomeController {
 		return googleService.readGoogleDrive();
 	}
 
-	@GetMapping("/readContent")
-	public String getFileContent(){
-		return googleService.readFileContent();
-	}
 }
